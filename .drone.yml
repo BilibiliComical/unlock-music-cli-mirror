@@ -1,0 +1,257 @@
+---
+kind: pipeline
+name: build linux/amd64
+steps:
+- commands:
+  - git fetch --tags
+  image: alpine/git
+  name: fetch tags
+- commands:
+  - go test -v ./...
+  environment:
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go test
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - tar -c -C $DIST_DIR um | gzip -9 > "dist/um-linux-amd64-$(git describe --tags
+    --always).tar.gz"
+  environment:
+    GOARCH: amd64
+    GOOS: linux
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build linux/amd64
+- commands:
+  - curl --fail --include --user "um-release-bot:$GITEA_API_KEY" --upload-file "dist/um-linux-amd64-$(git
+    describe --tags --always).tar.gz" "$DRONE_GITEA_SERVER/api/packages/${DRONE_REPO_NAMESPACE}/generic/${DRONE_REPO_NAME}-build/${DRONE_BUILD_NUMBER}/um-linux-amd64-$(git
+    describe --tags --always).tar.gz"
+  - sha256sum dist/um-linux-amd64-$(git describe --tags --always).tar.gz
+  - echo $DRONE_GITEA_SERVER/${DRONE_REPO_NAMESPACE}/-/packages/generic/${DRONE_REPO_NAME}-build/${DRONE_BUILD_NUMBER}
+  environment:
+    DRONE_GITEA_SERVER: https://git.unlock-music.dev
+    GITEA_API_KEY:
+      from_secret: GITEA_API_KEY
+  image: golang:1.22
+  name: upload artifact
+trigger:
+  event:
+  - push
+  - pull_request
+type: docker
+---
+kind: pipeline
+name: build windows/amd64
+steps:
+- commands:
+  - git fetch --tags
+  image: alpine/git
+  name: fetch tags
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - command -v zip >/dev/null || (apt update && apt install -y zip)
+  - zip -9 -j -r "dist/um-windows-amd64-$(git describe --tags --always).zip" $DIST_DIR
+  environment:
+    GOARCH: amd64
+    GOOS: windows
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build windows/amd64
+- commands:
+  - curl --fail --include --user "um-release-bot:$GITEA_API_KEY" --upload-file "dist/um-windows-amd64-$(git
+    describe --tags --always).zip" "$DRONE_GITEA_SERVER/api/packages/${DRONE_REPO_NAMESPACE}/generic/${DRONE_REPO_NAME}-build/${DRONE_BUILD_NUMBER}/um-windows-amd64-$(git
+    describe --tags --always).zip"
+  - sha256sum dist/um-windows-amd64-$(git describe --tags --always).zip
+  - echo $DRONE_GITEA_SERVER/${DRONE_REPO_NAMESPACE}/-/packages/generic/${DRONE_REPO_NAME}-build/${DRONE_BUILD_NUMBER}
+  environment:
+    DRONE_GITEA_SERVER: https://git.unlock-music.dev
+    GITEA_API_KEY:
+      from_secret: GITEA_API_KEY
+  image: golang:1.22
+  name: upload artifact
+trigger:
+  event:
+  - push
+  - pull_request
+type: docker
+---
+kind: pipeline
+name: build darwin/amd64
+steps:
+- commands:
+  - git fetch --tags
+  image: alpine/git
+  name: fetch tags
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - tar -c -C $DIST_DIR um | gzip -9 > "dist/um-darwin-amd64-$(git describe --tags
+    --always).tar.gz"
+  environment:
+    GOARCH: amd64
+    GOOS: darwin
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build darwin/amd64
+- commands:
+  - curl --fail --include --user "um-release-bot:$GITEA_API_KEY" --upload-file "dist/um-darwin-amd64-$(git
+    describe --tags --always).tar.gz" "$DRONE_GITEA_SERVER/api/packages/${DRONE_REPO_NAMESPACE}/generic/${DRONE_REPO_NAME}-build/${DRONE_BUILD_NUMBER}/um-darwin-amd64-$(git
+    describe --tags --always).tar.gz"
+  - sha256sum dist/um-darwin-amd64-$(git describe --tags --always).tar.gz
+  - echo $DRONE_GITEA_SERVER/${DRONE_REPO_NAMESPACE}/-/packages/generic/${DRONE_REPO_NAME}-build/${DRONE_BUILD_NUMBER}
+  environment:
+    DRONE_GITEA_SERVER: https://git.unlock-music.dev
+    GITEA_API_KEY:
+      from_secret: GITEA_API_KEY
+  image: golang:1.22
+  name: upload artifact
+trigger:
+  event:
+  - push
+  - pull_request
+type: docker
+---
+kind: pipeline
+name: release
+steps:
+- commands:
+  - git fetch --tags
+  image: alpine/git
+  name: fetch tags
+- commands:
+  - go test -v ./...
+  environment:
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go test
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - tar -c -C $DIST_DIR um | gzip -9 > "dist/um-linux-amd64-$(git describe --tags
+    --always).tar.gz"
+  environment:
+    GOARCH: amd64
+    GOOS: linux
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build linux/amd64
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - tar -c -C $DIST_DIR um | gzip -9 > "dist/um-linux-arm64-$(git describe --tags
+    --always).tar.gz"
+  environment:
+    GOARCH: arm64
+    GOOS: linux
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build linux/arm64
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - tar -c -C $DIST_DIR um | gzip -9 > "dist/um-linux-386-$(git describe --tags --always).tar.gz"
+  environment:
+    GOARCH: "386"
+    GOOS: linux
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build linux/386
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - command -v zip >/dev/null || (apt update && apt install -y zip)
+  - zip -9 -j -r "dist/um-windows-amd64-$(git describe --tags --always).zip" $DIST_DIR
+  environment:
+    GOARCH: amd64
+    GOOS: windows
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build windows/amd64
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - command -v zip >/dev/null || (apt update && apt install -y zip)
+  - zip -9 -j -r "dist/um-windows-arm64-$(git describe --tags --always).zip" $DIST_DIR
+  environment:
+    GOARCH: arm64
+    GOOS: windows
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build windows/arm64
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - command -v zip >/dev/null || (apt update && apt install -y zip)
+  - zip -9 -j -r "dist/um-windows-386-$(git describe --tags --always).zip" $DIST_DIR
+  environment:
+    GOARCH: "386"
+    GOOS: windows
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build windows/386
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - tar -c -C $DIST_DIR um | gzip -9 > "dist/um-darwin-amd64-$(git describe --tags
+    --always).tar.gz"
+  environment:
+    GOARCH: amd64
+    GOOS: darwin
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build darwin/amd64
+- commands:
+  - DIST_DIR=$(mktemp -d)
+  - go build -v -trimpath -ldflags="-w -s -X main.AppVersion=$(git describe --tags
+    --always)" -o $DIST_DIR ./cmd/um
+  - mkdir -p dist
+  - tar -c -C $DIST_DIR um | gzip -9 > "dist/um-darwin-arm64-$(git describe --tags
+    --always).tar.gz"
+  environment:
+    GOARCH: arm64
+    GOOS: darwin
+    GOPROXY: https://goproxy.io,direct
+  image: golang:1.22
+  name: go build darwin/arm64
+- commands:
+  - mv dist/*.tar.gz dist/*.zip ./
+  image: golang:1.22
+  name: prepare root
+- image: plugins/gitea-release
+  name: create release
+  settings:
+    api_key:
+      from_secret: GITEA_API_KEY
+    base_url: https://git.unlock-music.dev
+    checksum: sha256
+    draft: true
+    files:
+    - um-*.tar.gz
+    - um-*.zip
+    title: ${DRONE_TAG}
+trigger:
+  event:
+  - tag
+type: docker

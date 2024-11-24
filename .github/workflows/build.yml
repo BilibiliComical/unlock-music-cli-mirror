@@ -1,0 +1,67 @@
+name: Build
+on:
+  push:
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - ".github/workflows/*.yml"
+  pull_request:
+    branches: [ master ]
+    types: [ opened, synchronize, reopened ]
+    paths:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: "linux/amd64"
+            GOOS: "linux"
+            GOARCH: "amd64"
+            BIN_SUFFIX: ""
+          - target: "windows/amd64"
+            GOOS: "windows"
+            GOARCH: "amd64"
+            BIN_SUFFIX: ".exe"
+          - target: "darwin/amd64"
+            GOOS: "darwin"
+            GOARCH: "amd64"
+            BIN_SUFFIX: ""
+
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ^1.17
+
+      - name: Setup vars
+        id: vars
+        run: |
+          echo "::set-output name=short_sha::$(git rev-parse --short HEAD)"
+          echo "::set-output name=git_tag::$(git describe --tags --always)"
+
+      - name: Test
+        run: go test -v ./...
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.GOOS }}
+          GOARCH: ${{ matrix.GOARCH }}
+          CGO_ENABLED: 0
+        run: go build -v -trimpath -ldflags="-w -s -X main.AppVersion=${{ steps.vars.outputs.git_tag }}" -o um-${{ matrix.GOOS }}-${{ matrix.GOARCH }}${{ matrix.BIN_SUFFIX }} ./cmd/um
+
+      - name: Publish artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: um-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
+          path: ./um-${{ matrix.GOOS }}-${{ matrix.GOARCH }}${{ matrix.BIN_SUFFIX }}

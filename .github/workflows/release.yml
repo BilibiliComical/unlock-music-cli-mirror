@@ -1,0 +1,84 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  create_release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get current time
+        id: date
+        run: echo "::set-output name=date::$(date +'%Y/%m/%d')"
+
+      - name: Create release
+        id: release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: "Build ${{ steps.date.outputs.date }}"
+          draft: true
+    outputs:
+      upload_url: "${{ steps.release.outputs.upload_url }}"
+  build:
+    needs:
+      - create_release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: "linux/amd64"
+            GOOS: "linux"
+            GOARCH: "amd64"
+            BIN_SUFFIX: ""
+          - target: "windows/amd64"
+            GOOS: "windows"
+            GOARCH: "amd64"
+            BIN_SUFFIX: ".exe"
+          - target: "windows/386"
+            GOOS: "windows"
+            GOARCH: "386"
+            BIN_SUFFIX: ".exe"
+          - target: "darwin/amd64"
+            GOOS: "darwin"
+            GOARCH: "amd64"
+            BIN_SUFFIX: ""
+
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup vars
+        id: vars
+        run: |
+          echo "::set-output name=short_sha::$(git rev-parse --short HEAD)"
+          echo "::set-output name=git_tag::$(git describe --tags --always)"
+
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v4
+        with:
+          go-version: ^1.17
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.GOOS }}
+          GOARCH: ${{ matrix.GOARCH }}
+          CGO_ENABLED: 0
+        run: go build -trimpath -v -ldflags="-w -s -X main.AppVersion=${{ steps.vars.outputs.git_tag }}" -o um ./cmd/um
+
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v4
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: um
+          asset_name: um-${{ matrix.GOOS }}-${{ matrix.GOARCH }}${{ matrix.BIN_SUFFIX }}
+          asset_content_type: application/octet-stream
+
