@@ -35,12 +35,12 @@ jobs:
 
     steps:
       - name: Checkout codebase
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ^1.17
 
@@ -61,7 +61,7 @@ jobs:
         run: go build -v -trimpath -ldflags="-w -s -X main.AppVersion=${{ steps.vars.outputs.git_tag }}" -o um-${{ matrix.GOOS }}-${{ matrix.GOARCH }}${{ matrix.BIN_SUFFIX }} ./cmd/um
 
       - name: Publish artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: um-${{ matrix.GOOS }}-${{ matrix.GOARCH }}
           path: ./um-${{ matrix.GOOS }}-${{ matrix.GOARCH }}${{ matrix.BIN_SUFFIX }}
