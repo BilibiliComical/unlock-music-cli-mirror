@@ -15,7 +15,7 @@ jobs:
 
       - name: Create release
         id: release
-        uses: actions/create-release@v3
+        uses: actions/create-release@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -50,7 +50,7 @@ jobs:
 
     steps:
       - name: Checkout codebase
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -61,7 +61,7 @@ jobs:
           echo "git_tag=$(git describe --tags --always) >> $GITHUB_OUTPUT"
 
       - name: Set up Go 1.x
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v4
         with:
           go-version: ^1.17
 
@@ -73,7 +73,7 @@ jobs:
         run: go build -trimpath -v -ldflags="-w -s -X main.AppVersion=${{ steps.vars.outputs.git_tag }}" -o um ./cmd/um
 
       - name: Upload release assets
-        uses: actions/upload-release-asset@v3
+        uses: actions/upload-release-asset@v4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
