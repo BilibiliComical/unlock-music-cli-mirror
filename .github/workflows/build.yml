@@ -47,8 +47,8 @@ jobs:
       - name: Setup vars
         id: vars
         run: |
-          echo "::set-output name=short_sha::$(git rev-parse --short HEAD)"
-          echo "::set-output name=git_tag::$(git describe --tags --always)"
+          echo "short_sha=$(git rev-parse --short HEAD) >> $GITHUB_OUTPUT"
+          echo "git_tag=$(git describe --tags --always) >> $GITHUB_OUTPUT"
 
       - name: Test
         run: go test -v ./...

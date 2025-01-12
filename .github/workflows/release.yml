@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Get current time
         id: date
-        run: echo "::set-output name=date::$(date +'%Y/%m/%d')"
+        run: echo "date=$(date +'%Y/%m/%d') >> $GITHUB_OUTPUT"
 
       - name: Create release
         id: release
@@ -57,8 +57,8 @@ jobs:
       - name: Setup vars
         id: vars
         run: |
-          echo "::set-output name=short_sha::$(git rev-parse --short HEAD)"
-          echo "::set-output name=git_tag::$(git describe --tags --always)"
+          echo "short_sha=$(git rev-parse --short HEAD) >> $GITHUB_OUTPUT"
+          echo "git_tag=$(git describe --tags --always) >> $GITHUB_OUTPUT"
 
       - name: Set up Go 1.x
         uses: actions/setup-go@v3
